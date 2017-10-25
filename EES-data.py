@@ -1,50 +1,79 @@
 #!/usr/bin/env python
 
+"""
+This module prepares the EES voter data for analysis. It takes in four Stata 
+files (which should reside in the 'data' subdirectory) and produces means and
+standard errors of voter placements of the parties by countries. Object names
+ending with 89, 94, 99 and 04 indicate surveys in 1989, 1994, 1999 and 2004.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
+import time
+start = time.time()
 
 
-# EES 1989
+# EES 1989 data
+ees89 = pd.read_stata("data/ZA2320.dta")
+countries89 = ['DK', 'FR', 'GER', 'IRE', 'NL', 'GB']  # TODO: single dict.
+pos_vars89 = ['var' + str(x) for x in range(203, 213)]
+pos_data89 = pd.DataFrame(index=countries89)
 
-ees1989 = pd.read_stata("data/ZA2320.dta")
-countries1989 = ['DK', 'FR', 'GER', 'IRE', 'NL', 'GB']  # TODO: single dict.
-pos_vars1989 = ['var' + str(x) for x in range(203, 213)]
-pos_data1989 = pd.DataFrame()
-
-for var in pos_vars1989:
-    ees1989[var] = ees1989[var].replace({'LEFT': 1, 'RIGHT': 10})
-    pos_data1989[var + '_mean'] = ees1989.groupby('var003')[var].mean()
-    pos_data1989[var + '_se'] = ees1989.groupby(
+for var in pos_vars89:
+    ees89[var] = ees89[var].replace({'LEFT': 1, 'RIGHT': 10}, inplace=True)
+    pos_data89[var + '_mean'] = ees89.groupby('var003')[var].mean()
+    pos_data89[var + '_se'] = ees89.groupby(
         'var003')[var].apply(stats.sem, nan_policy='omit')
 
-pos_data1989 = pos_data1989.query('var003 in @countries1989')
-del ees1989                     # clear Stata file from memory
+del ees89                       # release large Stata file in memory
 
 
-# EES 1994 (this dataset has a different structure)
+# EES 1994 data
+ees94 = pd.read_stata("data/ZA2865.dta")
+countries94_dict = {'DK': 'den', 'FR': 'fra', 'GER': 'wge', 'GB': 'gb',
+                    'IRE': 'irl', 'NL': 'net'}
+keep_countries = ['DENMARK', 'FRANCE',
+                  'WEST GERMANY', 'GB', 'IRELAND', 'NETHERLANDS']
+ees94 = ees94.query('country in @keep_countries')
+pos_vars94 = ['v' + str(x) for x in range(118, 127)]
 
-ees1994 = pd.read_stata("data/ZA2865.dta")
-countries1994_dict = {'DK': 'den', 'FR': 'fra', 'GER': 'wge', 'GB': 'gb',
-                      'IRE': 'irl', 'NL': 'net'}
-countries1994 = ['DENMARK', 'FRANCE',
-                 'WEST GERMANY', 'GB', 'IRELAND', 'NETHERLANDS']
-ees1994 = ees1994.query('country in @countries1994')
-pos_vars1994 = ['v' + str(x) for x in range(118, 127)]
-pos_data1994 = pd.DataFrame(index=countries1994_dict.keys())
-
-for ckey, cval in countries1994_dict.items():
-    for var in pos_vars1994:
+# the basic logic of this loop is to collect all means and std.errors
+# for one country in the 'pc' pd.Series before appending it to the 
+# 'pos_data94' pd.DataFrame.
+pos_data94 = pd.DataFrame()
+for ckey, cval in countries94_dict.items():
+    pc = pd.Series(name=ckey)
+    for var in pos_vars94:
         varname = var + '_' + cval
-        if varname in ees1994.keys():
-            # ees1994[varname] = ees1994[varname].replace(
-            #     {'LEFT': 1.0, 'RIGHT': 10, 'DK': None,
-            #      'NA': None, 99: None})
-            s = pd.Series(ees1994[varname].mean(), name=ckey)
-            print(s)
-            pos_data1994.append(s)
+        if varname in ees94.keys():
+            ees94[varname] = ees94[varname].replace(
+                {'LEFT': 1.0, 'RIGHT': 10, 'DK': None,
+                 'NA': None, 99: None}, inplace=True)
+            m = pd.Series(ees94[varname].mean(), index=[
+                          var + '_mean'], name=ckey)
+            se = pd.Series(stats.sem(ees94[varname], nan_policy='omit'), index=[
+                           var + '_se'], name=ckey)
+            pc = pd.concat([pc, m, se])
+    pos_data94 = pos_data94.append(pc)
 
-            # pos_data1994[varname + '_mean'] = ees1994[varname].mean()
-            # pos_data1994[varname + '_se'] = stats.sem(
-            #     ees1994[varname], nan_policy='omit')
+del ees94
+
+
+# EES 1999
+ees99 = pd.read_stata("data/P1560a.dta")
+
+pos_vars99 = ['var' + str(x) for x in range(118, 130)]
+countries99_dict = {'DK': 'Denmark', 'FR': 'France', 'GER': 'Germany', 'GB': 'UK',
+                    'IRE': 'Ireland', 'NL': 'Netherlands', 'AT': 'Austria', 'SWE': 'Sweden'}
+pos_data99 = pd.DataFrame(index=countries99_dict.values())
+
+for var in pos_vars99:
+    ees99[var] = ees99[var].replace({'left': 1, 'right': 10, 'dk': None,
+                                     -1.0: None, 'na': None}, inplace=True)
+    pos_data99[var + '_mean'] = ees99.groupby('var002')[var].mean()
+    pos_data99[var + '_se'] = ees99.groupby(
+        'var002')[var].apply(stats.sem, nan_policy='omit')
+
+print('It took', time.time() - start, 'seconds.')
