@@ -13,7 +13,7 @@ import pandas as pd
 from scipy import stats
 
 
-def prep_data(year, data_files, pos_vars, country_var, 
+def prep_data(year, data_files, pos_vars, country_var,
               country_dict, replace_dict):
     """
     prep_data is the basic function to read in the Stata files and output
@@ -85,31 +85,32 @@ def ees_data():
                                  replace_dict[yr])
 
     # EES dataset 1994
-    stata94 = pd.read_stata('data/' + data_files[1994])
-    keep_countries = ['DENMARK', 'FRANCE', 'WEST GERMANY',
-                      'GB', 'IRELAND', 'NETHERLANDS']
-    ees94 = stata94.query('country in @keep_countries')
+    ees94 = pd.read_stata('data/' + data_files[1994])
 
     # the basic logic of this loop is to collect all means and std.errors
     # for one country in the 'pc' pd.Series before appending it to the
     # 'pos_data94' pd.DataFrame.
     pos_data[1994] = pd.DataFrame()
-    for i, (ckey, cval) in enumerate(country_dict[1994].items()):
+    for ckey, cval in country_dict[1994].items():
         pc = pd.Series(name=cval)
-        for var in pos_vars[1994]:
+        column_rename_dict = {}
+        for i, var in enumerate(pos_vars[1994]):
             varname = var + '_' + ckey
             if varname in ees94.keys():
-                ees94.loc[:, varname] = ees94.loc[:, varname].replace(
+                ees94.loc[:, varname] = ees94[varname].replace(
                     replace_dict[1994])
                 m = pd.Series(ees94[varname].mean(), index=[
                               var + '_mean'], name=cval)
                 se = pd.Series(stats.sem(ees94[varname], nan_policy='omit'),
                                index=[var + '_se'], name=cval)
                 pc = pd.concat([pc, m, se])
+
+            column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
+            column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
+
         pos_data[1994] = pos_data[1994].append(pc)
 
+    pos_data[1994] = pos_data[1994].rename(
+        country_dict, columns=column_rename_dict)
+
     return pos_data
-
-
-if __name__ == '__main__':
-    ees_data()
