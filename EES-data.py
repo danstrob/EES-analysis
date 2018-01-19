@@ -3,10 +3,9 @@
 """
 This module prepares the EES voter data for analysis. It takes in four Stata
 files (which should reside in the 'data' subdirectory) and produces means and
-standard errors of voter placements of the parties by countries. Object names
-ending with 89, 94, 99 and 04 indicate surveys in 1989, 1994, 1999 and 2004.
-The Stata files can be obtained from the official website of the European
-Election Studies: http://europeanelectionstudies.net/european-election-studies
+standard errors of voter placements of the parties by countries. The Stata
+files can be obtained from the official website of the European Election
+Studies: http://europeanelectionstudies.net/european-election-studies
 """
 
 import pandas as pd
@@ -32,7 +31,6 @@ def prep_data(year, data_files, pos_vars, country_var,
             stata.loc[:, var] = stata.loc[:, var].astype(float)
             stata.loc[stata.country == 'sweden',
                       var] = 1 + (stata[var] * 9) / 10
-
         df.loc[:, var + '_mean'] = stata.groupby(country_var)[var].mean()
         df.loc[:, var + '_se'] = stata.groupby(
             country_var)[var].apply(stats.sem, nan_policy='omit')
@@ -104,7 +102,6 @@ def ees_data():
                 se = pd.Series(stats.sem(ees94[varname], nan_policy='omit'),
                                index=[var + '_se'], name=cval)
                 pc = pd.concat([pc, m, se])
-
             column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
             column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
 
