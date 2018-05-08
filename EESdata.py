@@ -3,10 +3,9 @@
 """
 This module prepares the EES voter data for analysis. It takes in four Stata
 files (which should reside in the 'data' subdirectory) and produces means and
-standard errors of voter placements of the parties by countries. Object names
-ending with 89, 94, 99 and 04 indicate surveys in 1989, 1994, 1999 and 2004.
-The Stata files can be obtained from the official website of the European
-Election Studies: http://europeanelectionstudies.net/european-election-studies
+standard errors of voter placements of the parties by countries. The Stata
+files can be obtained from the official website of the European Election
+Studies: http://europeanelectionstudies.net/european-election-studies
 """
 
 import pandas as pd
@@ -30,15 +29,13 @@ def prep_data(year, data_files, pos_vars, country_var,
         stata.loc[:, var] = stata.loc[:, var].replace(replace_dict)
         if year == 2004:  # special recoding for SWE 04
             stata.loc[:, var] = stata.loc[:, var].astype(float)
-            stata.loc[stata.country == 'sweden',
-                      var] = 1 + (stata[var] * 9) / 10
+            stata.loc[stata.country == 'sweden', var] = 1 + (stata[var] * 9) / 10
+        df.loc[:, var + 'means'] = stata.groupby(country_var)[var].mean()
+        df.loc[:, var + 'se'] = stata.groupby(country_var)[var].apply(stats.sem,
+                                                                       nan_policy='omit')
 
-        df.loc[:, var + '_mean'] = stata.groupby(country_var)[var].mean()
-        df.loc[:, var + '_se'] = stata.groupby(
-            country_var)[var].apply(stats.sem, nan_policy='omit')
-
-        column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
-        column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
+        column_rename_dict[var + 'means'] = 'party' + str(i + 1) + 'means'
+        column_rename_dict[var + 'se'] = 'party' + str(i + 1) + 'se'
 
     # finally, set unified index and column names
     df = df.rename(country_dict, columns=column_rename_dict)
@@ -46,7 +43,7 @@ def prep_data(year, data_files, pos_vars, country_var,
     return df
 
 
-def ees_data():
+def EES_data():
     # define the relevant files, variables and how they should be recoded
     data_files = {1989: 'ZA2320.dta',
                   1994: 'ZA2865.dta',
@@ -97,17 +94,13 @@ def ees_data():
         for i, var in enumerate(pos_vars[1994]):
             varname = var + '_' + ckey
             if varname in ees94.keys():
-                ees94.loc[:, varname] = ees94[varname].replace(
-                    replace_dict[1994])
-                m = pd.Series(ees94[varname].mean(), index=[
-                              var + '_mean'], name=cval)
+                ees94.loc[:, varname] = ees94[varname].replace(replace_dict[1994])
+                m = pd.Series(ees94[varname].mean(), index=[var + 'means'], name=cval)
                 se = pd.Series(stats.sem(ees94[varname], nan_policy='omit'),
-                               index=[var + '_se'], name=cval)
+                               index=[var + 'se'], name=cval)
                 pc = pd.concat([pc, m, se])
-
-            column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
-            column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
-
+            column_rename_dict[var + 'means'] = 'party' + str(i + 1) + 'means'
+            column_rename_dict[var + 'se'] = 'party' + str(i + 1) + 'se'
         pos_data[1994] = pos_data[1994].append(pc)
 
     pos_data[1994] = pos_data[1994].rename(
