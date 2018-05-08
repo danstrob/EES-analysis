@@ -29,6 +29,7 @@ def prep_data(year, data_files, pos_vars, country_var,
         stata.loc[:, var] = stata.loc[:, var].replace(replace_dict)
         if year == 2004:  # special recoding for SWE 04
             stata.loc[:, var] = stata.loc[:, var].astype(float)
+<<<<<<< HEAD:EESdata.py
             stata.loc[stata.country == 'sweden', var] = 1 + (stata[var] * 9) / 10
         df.loc[:, var + 'means'] = stata.groupby(country_var)[var].mean()
         df.loc[:, var + 'se'] = stata.groupby(country_var)[var].apply(stats.sem,
@@ -36,6 +37,16 @@ def prep_data(year, data_files, pos_vars, country_var,
 
         column_rename_dict[var + 'means'] = 'party' + str(i + 1) + 'means'
         column_rename_dict[var + 'se'] = 'party' + str(i + 1) + 'se'
+=======
+            stata.loc[stata.country == 'sweden',
+                      var] = 1 + (stata[var] * 9) / 10
+        df.loc[:, var + '_mean'] = stata.groupby(country_var)[var].mean()
+        df.loc[:, var + '_se'] = stata.groupby(
+            country_var)[var].apply(stats.sem, nan_policy='omit')
+
+        column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
+        column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
+>>>>>>> d867f65241f7117b7f9236e16edc41bec146c6dc:EES-data.py
 
     # finally, set unified index and column names
     df = df.rename(country_dict, columns=column_rename_dict)
@@ -99,8 +110,14 @@ def EES_data():
                 se = pd.Series(stats.sem(ees94[varname], nan_policy='omit'),
                                index=[var + 'se'], name=cval)
                 pc = pd.concat([pc, m, se])
+<<<<<<< HEAD:EESdata.py
             column_rename_dict[var + 'means'] = 'party' + str(i + 1) + 'means'
             column_rename_dict[var + 'se'] = 'party' + str(i + 1) + 'se'
+=======
+            column_rename_dict[var + '_mean'] = 'party' + str(i + 1) + '_mean'
+            column_rename_dict[var + '_se'] = 'party' + str(i + 1) + '_se'
+
+>>>>>>> d867f65241f7117b7f9236e16edc41bec146c6dc:EES-data.py
         pos_data[1994] = pos_data[1994].append(pc)
 
     pos_data[1994] = pos_data[1994].rename(
